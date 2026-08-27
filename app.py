@@ -2,33 +2,21 @@
 app.py — Streamlit interactive dashboard
 ========================================
 A live, interactive front-end for the reverse-DCF + consensus + multiples
-toolkit. Works for ANY company: pick a bundled dataset, or upload your own
+toolkit. Works for ANY company: pick a bundled dataset, or upload your own five
 CSVs (generated via AGENT_DATA_COLLECTION_PROMPT.md). Consensus/comps layers
 auto-appear only when that data is present, so it works for uncovered small-caps
 too.
-
-COMPANY AUTO-DISCOVERY
-----------------------
-Company datasets live in subfolders named `data_<company>` inside the
-`company_data/` folder (e.g. company_data/data_ryanair, company_data/data_nvidia).
-The dropdown is built automatically from whatever `data_*` folders it finds —
-the label is the part after `data_` (so `data_ryanair` -> "Ryanair"). To add a
-new company you just add a new `data_<company>` folder of CSVs and commit; no
-edits to this file are ever needed.
-
-Legacy top-level `data/` and `data_smallcap/` folders (if present) are also
-picked up automatically.
 
 Run locally:
     pip install -r requirements.txt
     streamlit run app.py
 
 Deploy free: push the repo to GitHub, then on share.streamlit.io point a new app
-at app.py.
+at app.py. That gives you a public live dashboard URL — the Python-native
+equivalent of a "Lovable website", but able to actually run this model.
 """
 
 import copy
-import glob
 import os
 import tempfile
 
@@ -47,50 +35,15 @@ from settings import BRAND, BRAND_ALT, POS, NEG, INK
 
 st.set_page_config(page_title="Reverse-DCF Valuation", layout="wide")
 
+BUNDLED = {"NVDA (full coverage)": "data", "TINYCO (no coverage small-cap)": "data_smallcap"}
 REQUIRED = ["company_inputs.csv", "financial_history.csv"]
 OPTIONAL = ["analyst_consensus.csv", "analyst_bank_targets.csv", "multiples_comps.csv",
             "segments.csv", "valuation_history.csv"]
 
-# Where company folders live. `company_data/` is the primary location; the repo
-# root is also scanned so legacy `data/` and `data_smallcap/` still work.
-SEARCH_ROOTS = ["company_data", "."]
-
-
-def _label_from_folder(folder_name: str) -> str:
-    """'data_ryanair' -> 'Ryanair', 'data_smallcap' -> 'Smallcap', 'data' -> 'Data'."""
-    base = os.path.basename(folder_name.rstrip("/"))
-    name = base[len("data_"):] if base.startswith("data_") else base
-    name = name.replace("_", " ").replace("-", " ").strip()
-    return name.title() if name else base
-
 
 @st.cache_data(show_spinner=False)
-def discover_companies():
-    """Return {label: folder_path} for every folder that (a) is named `data` or
-    `data_*` and (b) contains the required CSVs. Scans company_data/ and repo root."""
-    found = {}
-    for root in SEARCH_ROOTS:
-        # match both 'data' and 'data_*' directly under each root
-        candidates = []
-        if os.path.isdir(root):
-            for entry in sorted(os.listdir(root)):
-                full = os.path.join(root, entry)
-                if os.path.isdir(full) and (entry == "data" or entry.startswith("data_")):
-                    candidates.append(full)
-        for path in candidates:
-            has_required = all(os.path.exists(os.path.join(path, r)) and
-                               os.path.getsize(os.path.join(path, r)) > 0 for r in REQUIRED)
-            if not has_required:
-                continue
-            label = _label_from_folder(path)
-            # avoid duplicate labels (e.g. same name under two roots)
-            uniq = label
-            i = 2
-            while uniq in found and found[uniq] != path:
-                uniq = f"{label} ({i})"
-                i += 1
-            found[uniq] = path
-    return dict(sorted(found.items(), key=lambda kv: kv[0].lower()))
+def _load(data_dir):
+    return load_all(data_dir)
 
 
 def _dir_from_upload(files):
@@ -101,33 +54,15 @@ def _dir_from_upload(files):
     return tmp
 
 
-@st.cache_data(show_spinner=False)
-def _load(data_dir):
-    return load_all(data_dir)
-
-
 # --------------------------------------------------------------------------
 # Sidebar: data source + assumption overrides
 # --------------------------------------------------------------------------
 st.sidebar.title("Valuation toolkit")
+source = st.sidebar.radio("Data source", ["Bundled example", "Upload my 5 CSVs"])
 
-companies = discover_companies()
-
-source = st.sidebar.radio("Data source", ["Bundled company", "Upload my CSVs"])
-
-if source == "Bundled company":
-    if not companies:
-        st.sidebar.error(
-            "No company folders found. Add a folder named `data_<company>` "
-            "(e.g. `company_data/data_ryanair`) containing at least "
-            "`company_inputs.csv` and `financial_history.csv`, then reload.")
-        st.title("Reverse-DCF + Consensus + Multiples")
-        st.info("No company datasets detected yet. See the sidebar for how to add one.")
-        st.stop()
-    choice = st.sidebar.selectbox("Company", list(companies.keys()))
-    data_dir = companies[choice]
-    st.sidebar.caption(f"Loaded from `{data_dir}`. "
-                       f"{len(companies)} compan{'y' if len(companies)==1 else 'ies'} auto-detected.")
+if source == "Bundled example":
+    choice = st.sidebar.selectbox("Company", list(BUNDLED.keys()))
+    data_dir = BUNDLED[choice]
 else:
     st.sidebar.caption("Upload the CSVs from AGENT_DATA_COLLECTION_PROMPT.md. "
                        "Required: company_inputs.csv + financial_history.csv. "
@@ -143,18 +78,63 @@ else:
 
 if not data_dir:
     st.title("Reverse-DCF + Consensus + Multiples")
-    st.info("Pick a bundled company or upload your CSVs in the sidebar to begin.")
+    st.info("Pick a bundled example or upload your CSVs in the sidebar to begin.")
     st.stop()
 
 data = _load(data_dir)
 base, drv0, meta = data["base"], data["drivers"], data["meta"]
 has_consensus, has_comps = data["has_consensus"], data["has_comps"]
 
+# --------------------------------------------------------------------------
+# 5-year historical averages (from financial_history.csv) to guide the sliders
+# --------------------------------------------------------------------------
+def _hist_avg(col, n):
+    """Mean of the last up to `n` non-null values of a history column, or None."""
+    try:
+        hist = data.get("history")
+        if hist is None or col not in hist.columns:
+            return None
+        s = hist[col].dropna().tail(n)
+        return float(s.mean()) if len(s) else None
+    except Exception:
+        return None
+
+
+def _pct(v):
+    return f"{v:.1%}" if v is not None else "n/a"
+
+
+# 2-year (recent trend) and 5-year (longer-run) historical averages
+avg_rev_growth_2y = _hist_avg("revenue_growth", 2)
+avg_rev_growth_5y = _hist_avg("revenue_growth", 5)
+avg_gross_margin_2y = _hist_avg("gross_margin", 2)
+avg_gross_margin_5y = _hist_avg("gross_margin", 5)
+
 st.sidebar.markdown("### Assumptions")
 n_trials = st.sidebar.select_slider("Monte Carlo trials", [1000, 2000, 5000, 10000, 20000], value=5000)
-y1 = st.sidebar.slider("Year-1 revenue growth", -0.20, 1.50, float(round(drv0.year1_growth, 3)), 0.01)
-tg = st.sidebar.slider("Terminal growth", 0.00, 0.08, float(round(drv0.terminal_growth, 3)), 0.005)
-gm = st.sidebar.slider("Terminal gross margin", 0.05, 0.95, float(round(drv0.terminal_gross_margin, 3)), 0.01)
+
+y1 = st.sidebar.slider(
+    "Year-1 revenue growth", -0.20, 1.50, float(round(drv0.year1_growth, 3)), 0.01,
+    help=(f"Historical guide — revenue growth: "
+          f"2-yr avg {_pct(avg_rev_growth_2y)}, 5-yr avg {_pct(avg_rev_growth_5y)}"))
+st.sidebar.caption(f"↳ Revenue growth — 2-yr avg: **{_pct(avg_rev_growth_2y)}** · "
+                   f"5-yr avg: **{_pct(avg_rev_growth_5y)}**")
+
+tg = st.sidebar.slider(
+    "Terminal growth", 0.00, 0.08, float(round(drv0.terminal_growth, 3)), 0.005,
+    help=(f"Reference — revenue growth: 2-yr avg {_pct(avg_rev_growth_2y)}, "
+          f"5-yr avg {_pct(avg_rev_growth_5y)}. Terminal growth is normally set well "
+          f"below these, toward a long-run / GDP-like rate."))
+st.sidebar.caption(f"↳ Revenue growth (ref) — 2-yr avg: **{_pct(avg_rev_growth_2y)}** · "
+                   f"5-yr avg: **{_pct(avg_rev_growth_5y)}**")
+
+gm = st.sidebar.slider(
+    "Terminal gross margin", 0.05, 0.95, float(round(drv0.terminal_gross_margin, 3)), 0.01,
+    help=(f"Historical guide — gross margin: "
+          f"2-yr avg {_pct(avg_gross_margin_2y)}, 5-yr avg {_pct(avg_gross_margin_5y)}"))
+st.sidebar.caption(f"↳ Gross margin — 2-yr avg: **{_pct(avg_gross_margin_2y)}** · "
+                   f"5-yr avg: **{_pct(avg_gross_margin_5y)}**")
+
 wacc = st.sidebar.slider("WACC", 0.04, 0.20, float(round(drv0.wacc, 3)), 0.005)
 exit_w = st.sidebar.slider("Exit-multiple weight in TV", 0.0, 1.0, float(drv0.exit_multiple_weight), 0.05)
 sbc = st.sidebar.slider("SBC dilution % / yr", 0.0, 0.05, float(drv0.sbc_dilution_pct), 0.005)
@@ -204,128 +184,87 @@ k[2].metric("MC percentile of price", f"{pct_below:.0f}th")
 k[3].metric("Implied terminal growth", f"{imp_tg:.2%}" if imp_tg is not None else "n/a")
 k[4].metric("Implied WACC", f"{imp_wacc:.2%}" if imp_wacc is not None else "n/a")
 
-# ==========================================================================
-# What combinations of levers reproduce today's price?  (reverse Monte Carlo)
-# ==========================================================================
-st.divider()
-st.subheader("🎯 What must be true for the DCF to equal today's price?")
-st.caption("Of thousands of randomized lever combinations, these are the ones whose DCF value "
-           "lands on the current share price — i.e. the assumption sets the market appears to be "
-           "embedding. When peers exist, the exit EV/EBITDA multiple is randomized too, so "
-           "multiples are factored in.")
+# --------------------------------------------------------------------------
+# NEW: "What must hold true for today's price to be fair?"
+# --------------------------------------------------------------------------
+import market_consistent as mcx
 
-band_pct = st.slider("Match tolerance around current price (±%)", 1.0, 10.0, 2.5, 0.5,
-                     help="A scenario 'reproduces' the price if its DCF is within this band of "
-                          "today's price. Widen it if too few scenarios match.") / 100.0
+st.markdown("## 🎯 What must hold true for today's price to be fair?")
+st.caption("The reverse-DCF run below keeps only the simulated scenarios whose DCF value "
+           "lands on today's share price. The spread of each assumption in that surviving "
+           "set is, in effect, what the market appears to be pricing in. When a peer set "
+           "exists, the exit EV/EBITDA multiple is randomised too, so multiples are baked in.")
 
-if has_comps:
-    with st.spinner("Solving lever combinations (multiples-aware)..."):
-        trials_solve = mv.run_exit_multiple_blend(
-            base, drv, data["comps"], blend_weight=0.5,
-            n_trials=max(4000, n_trials), seed=11)
-else:
-    trials_solve = trials_a
+mc_band = st.slider("Match tolerance around current price (±%)", 1.0, 10.0, 2.5, 0.5,
+                    help="A scenario 'reproduces' the price if its DCF value is within this "
+                         "band of the current price. Widen it if too few scenarios match.") / 100.0
 
-cur = base.current_price
-_b = band_pct
-mask = trials_solve["implied_price"].between(cur * (1 - _b), cur * (1 + _b))
-consistent = trials_solve[mask].copy()
-while len(consistent) < 60 and _b < 0.15:
-    _b += 0.01
-    mask = trials_solve["implied_price"].between(cur * (1 - _b), cur * (1 + _b))
-    consistent = trials_solve[mask].copy()
+# A dedicated reverse-DCF cloud for this question. When peers exist we use the
+# exit-multiple-blended variant (adds the exit EV/EBITDA multiple as a dimension);
+# otherwise the standard own-assumptions cloud. Capped at 8k trials for speed.
+_mc_trials = min(max(n_trials, 4000), 8000)
+with st.spinner(f"Solving the reverse-DCF cloud ({_mc_trials:,} scenarios)..."):
+    if has_comps:
+        trials_consistent = mv.run_exit_multiple_blend(base, drv, data["comps"],
+                                                       blend_weight=0.5, n_trials=_mc_trials, seed=11)
+    else:
+        trials_consistent = mc.run_monte_carlo(base, drv, n_trials=_mc_trials, seed=42)
 
-_LEVERS = [
-    ("year1_growth", "Year-1 revenue growth", "pct"),
-    ("terminal_growth", "Terminal growth", "pct"),
-    ("terminal_gross_margin", "Terminal gross margin", "pct"),
-    ("wacc", "WACC (discount rate)", "pct"),
-    ("terminal_capex_pct_revenue", "Terminal capex % of revenue", "pct"),
-    ("exit_ev_ebitda_multiple", "Exit EV/EBITDA multiple", "mult"),
-]
+sub, band_used, status = mcx.market_consistent_subset(trials_consistent, base.current_price, band=mc_band)
 
+st.info(mcx.narrative(sub, drv, status, band_used))
 
-def _fmt(v, kind):
-    if v is None or (isinstance(v, float) and np.isnan(v)):
-        return "—"
-    return f"{v:.1%}" if kind == "pct" else f"{v:.1f}x"
+mc_left, mc_right = st.columns([1.35, 1])
 
+with mc_left:
+    st.markdown("**What each assumption must be (10th–90th percentile of matching scenarios)**")
+    if status in ("above", "below"):
+        st.warning("No scenarios matched — today's price is outside the entire simulated range, "
+                   "so there's no assumption set within these ranges that reproduces it. "
+                   "Try widening the driver ranges, or read this as the market pricing in "
+                   "something beyond the tested bounds.")
+    else:
+        ranges = mcx.consistent_ranges(sub, trials_consistent)
+        show = ranges[["driver", "need_low", "need_mid", "need_high", "full_low", "full_high"]].rename(
+            columns={"driver": "Assumption", "need_low": "Need: low (10th)",
+                     "need_mid": "Need: mid (50th)", "need_high": "Need: high (90th)",
+                     "full_low": "Full range low", "full_high": "Full range high"})
+        st.dataframe(show, use_container_width=True, hide_index=True)
+        # Range-band chart: market-consistent band (bold) vs full simulated band (faint)
+        rr = ranges[ranges["kind"] == "pct"]
+        if len(rr):
+            figc, axc = plt.subplots(figsize=(6.4, 0.6 * len(rr) + 1.2))
+            yv = np.arange(len(rr))
+            for i, (_, r) in enumerate(rr.iterrows()):
+                axc.plot([r["_f10"], r["_f90"]], [i, i], color="#c9ced6", lw=7, solid_capstyle="round")
+                axc.plot([r["_c10"], r["_c90"]], [i, i], color=BRAND, lw=7, solid_capstyle="round")
+                axc.plot(r["_c50"], i, "o", color=INK, ms=5)
+            axc.set_yticks(yv); axc.set_yticklabels(rr["driver"], fontsize=8)
+            axc.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+            axc.set_title("Blue = must-hold range · grey = full tested range", fontsize=9)
+            axc.grid(axis="x", alpha=0.3)
+            st.pyplot(figc)
 
-if len(consistent) == 0:
-    med_sim = float(trials_solve["implied_price"].median())
-    p99_sim = float(np.percentile(trials_solve["implied_price"], 99))
-    st.warning(
-        f"**No lever combination reproduces ${cur:,.2f} within ±{_b:.0%}.** Even the most "
-        f"favorable simulated scenario only reaches ${p99_sim:,.2f} (median ${med_sim:,.2f}). "
-        f"The market is pricing in more than these lever ranges support — i.e. today's price "
-        f"already embeds an out-of-range, very optimistic story.")
-else:
-    def _med(col):
-        return float(np.median(consistent[col])) if col in consistent.columns else None
-
-    present = [(c, lbl, kind) for c, lbl, kind in _LEVERS if c in consistent.columns]
-    mcols = st.columns(len(present))
-    for (c, lbl, kind), col_ui in zip(present, mcols):
-        short = lbl.split(" (")[0]
-        col_ui.metric(f"Implied {short.lower()}", _fmt(_med(c), kind))
-
-    range_rows = []
-    for c, lbl, kind in present:
-        p5, p25, p50, p75, p95 = np.percentile(consistent[c], [5, 25, 50, 75, 95])
-        range_rows.append({
-            "Lever": lbl,
-            "Bearish (P5)": _fmt(p5, kind),
-            "Low (P25)": _fmt(p25, kind),
-            "Central (median)": _fmt(p50, kind),
-            "High (P75)": _fmt(p75, kind),
-            "Bullish (P95)": _fmt(p95, kind),
+with mc_right:
+    st.markdown("**Multiples the current price implies**")
+    im = mcx.implied_multiples_at_price(base, forecast, data["comps"] if has_comps else None)
+    mult_rows = []
+    for kkey in ["Fwd EV/EBITDA", "Fwd P/E", "Fwd EV/Revenue"]:
+        iv = im["implied"].get(kkey)
+        pv = im["peer"].get(kkey)
+        mult_rows.append({
+            "Multiple": kkey,
+            "At today's price": (f"{iv:.1f}x" if iv == iv else "—"),
+            "Peer median": (f"{pv:.1f}x" if (pv is not None and pv == pv) else "—"),
         })
-    ranges_df = pd.DataFrame(range_rows)
-
-    left_c, right_c = st.columns([1.05, 1])
-    with left_c:
-        st.markdown(f"**Lever ranges that reproduce ${cur:,.2f}**  \n"
-                    f"<span style='color:#888'>{len(consistent):,} matching scenarios "
-                    f"(±{_b:.0%} band, {len(consistent)/len(trials_solve):.0%} of the "
-                    f"{len(trials_solve):,} simulated)</span>", unsafe_allow_html=True)
-        st.dataframe(ranges_df, use_container_width=True, hide_index=True)
-
-    with right_c:
-        if {"wacc", "year1_growth"}.issubset(consistent.columns):
-            st.markdown("**The trade-off frontier**")
-            fig0, ax0 = plt.subplots(figsize=(6, 4.2))
-            color_col = "terminal_gross_margin" if "terminal_gross_margin" in consistent.columns else None
-            sc = ax0.scatter(consistent["wacc"], consistent["year1_growth"],
-                             c=(consistent[color_col] if color_col else BRAND),
-                             cmap="viridis" if color_col else None, s=16, alpha=0.75)
-            ax0.set_xlabel("WACC"); ax0.set_ylabel("Year-1 revenue growth")
-            ax0.set_title(f"Combinations that reprice to ${cur:,.0f}")
-            ax0.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.0%}"))
-            ax0.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
-            if color_col:
-                cb = fig0.colorbar(sc, ax=ax0); cb.set_label("Terminal gross margin")
-                cb.ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
-            ax0.grid(alpha=0.3)
-            st.pyplot(fig0)
-            st.caption("Each dot is one scenario whose DCF equals today's price. Higher growth only "
-                       "reproduces the price alongside a higher discount rate — the market's implied trade-off.")
-
-    show_cols = [c for c, _, _ in present] + ["implied_price"]
-    preview = consistent[show_cols].copy().sort_values("implied_price").reset_index(drop=True)
-    with st.expander(f"See the {len(consistent):,} price-consistent lever combinations (raw)"):
-        st.dataframe(preview.round(4), use_container_width=True, height=320)
-
-    st.download_button(
-        "⬇️ Download price-consistent combinations (CSV)",
-        data=preview.to_csv(index=False).encode("utf-8"),
-        file_name=f"{meta['ticker']}_price_consistent_combinations.csv",
-        mime="text/csv")
-
-st.download_button(
-    "⬇️ Download full Monte Carlo simulation (CSV)",
-    data=trials_solve.to_csv(index=False).encode("utf-8"),
-    file_name=f"{meta['ticker']}_monte_carlo_trials.csv",
-    mime="text/csv")
+    st.dataframe(pd.DataFrame(mult_rows), use_container_width=True, hide_index=True)
+    if has_comps:
+        st.caption("If 'at today's price' sits below the peer median, the market is paying "
+                   "less than peers for the same forward metric (a relative discount), and "
+                   "vice-versa.")
+    else:
+        st.caption("No peer set loaded, so only the implied side is shown. Add a "
+                   "multiples_comps.csv to compare against peers.")
 
 st.divider()
 
@@ -359,44 +298,4 @@ with right:
     ax.hist(trials_a["implied_price"], bins=70, color=BRAND, alpha=0.85)
     ax.axvline(base.current_price, color=INK, ls="--", lw=2, label=f"Price ${base.current_price:,.0f}")
     ax.axvline(dcf_price, color=NEG, ls="-", lw=2, label=f"Base DCF ${dcf_price:,.0f}")
-    ax.set_xlim(0, np.percentile(trials_a["implied_price"], 99))
-    ax.set_xlabel("Implied price ($)"); ax.legend(fontsize=8)
-    st.pyplot(fig)
-
-# --------------------------------------------------------------------------
-# Tornado + 2D grid + scenarios
-# --------------------------------------------------------------------------
-c1, c2 = st.columns(2)
-with c1:
-    st.subheader("Tornado — driver sensitivity")
-    torn = enh.tornado_sensitivity(base, drv)
-    fig2, ax2 = plt.subplots(figsize=(6, 4))
-    bp = torn.attrs["base_price"]
-    for i, r in torn.iterrows():
-        ax2.barh([i], [r["price_high"] - bp], left=[bp], color=POS)
-        ax2.barh([i], [r["price_low"] - bp], left=[bp], color=NEG)
-    ax2.axvline(bp, color=INK, lw=1.5)
-    ax2.set_yticks(range(len(torn))); ax2.set_yticklabels(torn["driver"], fontsize=8)
-    ax2.set_xlabel("Implied price ($)")
-    st.pyplot(fig2)
-with c2:
-    st.subheader("Scenarios (bear / base / bull)")
-    fig3, ax3 = plt.subplots(figsize=(6, 4))
-    cmap = {"Bear": NEG, "Base": BRAND, "Bull": POS}
-    ax3.bar(scen["scenario"], scen["implied_price"], color=[cmap[s] for s in scen["scenario"]])
-    ax3.axhline(base.current_price, color=INK, ls="--")
-    for i, r in scen.iterrows():
-        ax3.text(i, r["implied_price"], f"${r['implied_price']:,.0f}", ha="center", va="bottom", fontsize=8)
-    ax3.set_ylabel("Implied price ($)")
-    st.pyplot(fig3)
-
-st.subheader("WACC × terminal-growth sensitivity")
-grid = enh.sensitivity_grid_2d(base, drv)
-st.dataframe(grid.style.format("${:,.0f}", na_rep="—"), use_container_width=True)
-
-with st.expander("Forecast detail (first years)"):
-    st.dataframe(forecast[["revenue", "growth", "ebitda", "ebit_margin", "ufcf", "shares", "eps"]]
-                 .round(2), use_container_width=True)
-
-st.caption("Educational tool, not investment advice. Regenerate inputs via "
-           "AGENT_DATA_COLLECTION_PROMPT.md before relying on any figure.")
+    ax.set_xlim(0, np.percentile(trials_
