@@ -1,0 +1,7 @@
+entity,ticker,is_subject,price,shares_diluted,market_cap,net_debt,enterprise_value,pe_ttm,pe_fwd,ev_ebitda_ttm,ev_ebitda_fwd,ev_revenue_ttm,ev_revenue_fwd,peg_fwd,as_of_date,notes
+Ryanair Holdings plc,RYAAY,TRUE,55.61,532,34870,-1760,33130,12.60,12.15,7.81,,1.87,,,2026-08-27,Stock Analysis; ADR and reporting-share sources differ
+Delta Air Lines,DAL,FALSE,,,54109,,,13.68,,,,,,,2026-08-24,FinanceCharts market cap and trailing PE
+United Airlines Holdings,UAL,FALSE,,,36837,,,10.62,,,,,,,2026-08-24,FinanceCharts market cap and trailing PE
+Southwest Airlines,LUV,FALSE,,,19879,,,25.77,,,,,,,2026-08-24,FinanceCharts market cap and trailing PE
+American Airlines Group,AAL,FALSE,,,9056,,,-27.82,,,,,,,2026-08-24,FinanceCharts market cap and trailing PE
+International Consolidated Airlines Group,ICAGY,FALSE,,,21466,,,3.94,,,,,,,2026-08-24,FinanceCharts market cap and trailing PE
