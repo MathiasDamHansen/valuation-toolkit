@@ -35,10 +35,53 @@ from settings import BRAND, BRAND_ALT, POS, NEG, INK
 
 st.set_page_config(page_title="Reverse-DCF Valuation", layout="wide")
 
-BUNDLED = {"NVDA (full coverage)": "data", "TINYCO (no coverage small-cap)": "data_smallcap"}
+# Parent folder that holds one subfolder per company (e.g. company_data/data_nvidia,
+# company_data/data_pltr, ...). Each subfolder must contain at least company_inputs.csv
+# and financial_history.csv. The dropdown is built automatically from whatever is here.
+COMPANY_DATA_DIR = "company_data"
 REQUIRED = ["company_inputs.csv", "financial_history.csv"]
 OPTIONAL = ["analyst_consensus.csv", "analyst_bank_targets.csv", "multiples_comps.csv",
             "segments.csv", "valuation_history.csv"]
+
+
+def _company_label(folder):
+    """Build a nice dropdown label ('NVIDIA Corporation (NVDA)') by reading the
+    ticker/company_name out of the folder's company_inputs.csv. Falls back to the
+    folder name if anything is missing."""
+    try:
+        df = pd.read_csv(os.path.join(folder, "company_inputs.csv"))
+        kv = {}
+        for _, r in df.iterrows():
+            val = r.get("value")
+            if pd.notna(val):
+                kv[str(r["field"]).strip()] = str(val).strip()
+        name = kv.get("company_name", "")
+        ticker = kv.get("ticker", "")
+        if name and ticker:
+            return f"{name} ({ticker})"
+        return name or ticker or os.path.basename(folder)
+    except Exception:
+        return os.path.basename(folder)
+
+
+@st.cache_data(show_spinner=False)
+def _discover_companies():
+    """Scan COMPANY_DATA_DIR (and, for backward compatibility, the repo root) for
+    subfolders that contain a company_inputs.csv, and return {label: path}."""
+    found = {}
+    # 1) Preferred layout: company_data/<subfolder>/company_inputs.csv
+    if os.path.isdir(COMPANY_DATA_DIR):
+        for sub in sorted(os.listdir(COMPANY_DATA_DIR)):
+            path = os.path.join(COMPANY_DATA_DIR, sub)
+            if os.path.isdir(path) and os.path.exists(os.path.join(path, "company_inputs.csv")):
+                found[_company_label(path)] = path
+    # 2) Backward-compatible fallback: top-level data* folders (e.g. data, data_smallcap)
+    if os.path.isdir("."):
+        for sub in sorted(os.listdir(".")):
+            if sub.startswith("data") and os.path.isdir(sub) \
+                    and os.path.exists(os.path.join(sub, "company_inputs.csv")):
+                found.setdefault(_company_label(sub), sub)
+    return found
 
 
 @st.cache_data(show_spinner=False)
@@ -58,11 +101,19 @@ def _dir_from_upload(files):
 # Sidebar: data source + assumption overrides
 # --------------------------------------------------------------------------
 st.sidebar.title("Valuation toolkit")
-source = st.sidebar.radio("Data source", ["Bundled example", "Upload my 5 CSVs"])
+companies = _discover_companies()
+source = st.sidebar.radio("Data source", ["Bundled companies", "Upload my CSVs"])
 
-if source == "Bundled example":
-    choice = st.sidebar.selectbox("Company", list(BUNDLED.keys()))
-    data_dir = BUNDLED[choice]
+if source == "Bundled companies":
+    if companies:
+        choice = st.sidebar.selectbox("Company", list(companies.keys()))
+        data_dir = companies[choice]
+    else:
+        data_dir = None
+        st.sidebar.error(
+            f"No companies found. Create a '{COMPANY_DATA_DIR}/' folder in the repo with one "
+            "subfolder per company (e.g. data_nvidia, data_pltr), each containing at least "
+            "company_inputs.csv and financial_history.csv.")
 else:
     st.sidebar.caption("Upload the CSVs from AGENT_DATA_COLLECTION_PROMPT.md. "
                        "Required: company_inputs.csv + financial_history.csv. "
@@ -78,7 +129,8 @@ else:
 
 if not data_dir:
     st.title("Reverse-DCF + Consensus + Multiples")
-    st.info("Pick a bundled example or upload your CSVs in the sidebar to begin.")
+    st.info(f"Pick a company in the sidebar, or add company subfolders under "
+            f"'{COMPANY_DATA_DIR}/' in your repo. You can also upload CSVs directly.")
     st.stop()
 
 data = _load(data_dir)
