@@ -139,6 +139,144 @@ k[2].metric("MC percentile of price", f"{pct_below:.0f}th")
 k[3].metric("Implied terminal growth", f"{imp_tg:.2%}" if imp_tg is not None else "n/a")
 k[4].metric("Implied WACC", f"{imp_wacc:.2%}" if imp_wacc is not None else "n/a")
 
+# ==========================================================================
+# NEW SECTION — "What combinations of levers reproduce today's price?"
+# Reverse Monte Carlo: keep only the simulated scenarios whose DCF value lands
+# on the current market price, then show what growth / WACC / margin / capex
+# (and, when peers exist, exit EV/EBITDA multiple) those scenarios require.
+# Everything is driven straight from the Monte Carlo trials, and the resulting
+# combinations are downloadable as CSV.
+# ==========================================================================
+st.divider()
+st.subheader("🎯 What must be true for the DCF to equal today's price?")
+st.caption("Of thousands of randomized lever combinations, these are the ones whose DCF value "
+           "lands on the current share price — i.e. the assumption sets the market appears to be "
+           "embedding. When peers exist, the exit EV/EBITDA multiple is randomized too, so "
+           "multiples are factored in.")
+
+band_pct = st.slider("Match tolerance around current price (±%)", 1.0, 10.0, 2.5, 0.5,
+                     help="A scenario 'reproduces' the price if its DCF is within this band of "
+                          "today's price. Widen it if too few scenarios match.") / 100.0
+
+# Use a multiples-aware cloud when peers exist (adds exit EV/EBITDA as a lever);
+# otherwise reuse the standard own-assumptions Monte Carlo already computed.
+if has_comps:
+    with st.spinner("Solving lever combinations (multiples-aware)..."):
+        trials_solve = mv.run_exit_multiple_blend(
+            base, drv, data["comps"], blend_weight=0.5,
+            n_trials=max(4000, n_trials), seed=11)
+else:
+    trials_solve = trials_a
+
+cur = base.current_price
+# find the price-consistent subset, auto-widening the band until enough match
+_b = band_pct
+mask = trials_solve["implied_price"].between(cur * (1 - _b), cur * (1 + _b))
+consistent = trials_solve[mask].copy()
+while len(consistent) < 60 and _b < 0.15:
+    _b += 0.01
+    mask = trials_solve["implied_price"].between(cur * (1 - _b), cur * (1 + _b))
+    consistent = trials_solve[mask].copy()
+
+# levers to report (only those present as columns get shown)
+_LEVERS = [
+    ("year1_growth", "Year-1 revenue growth", "pct"),
+    ("terminal_growth", "Terminal growth", "pct"),
+    ("terminal_gross_margin", "Terminal gross margin", "pct"),
+    ("wacc", "WACC (discount rate)", "pct"),
+    ("terminal_capex_pct_revenue", "Terminal capex % of revenue", "pct"),
+    ("exit_ev_ebitda_multiple", "Exit EV/EBITDA multiple", "mult"),
+]
+
+
+def _fmt(v, kind):
+    if v is None or (isinstance(v, float) and np.isnan(v)):
+        return "—"
+    return f"{v:.1%}" if kind == "pct" else f"{v:.1f}x"
+
+
+if len(consistent) == 0:
+    # price sits outside the entire simulated cloud — informative in itself
+    med_sim = float(trials_solve["implied_price"].median())
+    p99_sim = float(np.percentile(trials_solve["implied_price"], 99))
+    st.warning(
+        f"**No lever combination reproduces ${cur:,.2f} within ±{_b:.0%}.** Even the most "
+        f"favorable simulated scenario only reaches ${p99_sim:,.2f} (median ${med_sim:,.2f}). "
+        f"The market is pricing in more than these lever ranges support — i.e. today's price "
+        f"already embeds an out-of-range, very optimistic story.")
+else:
+    # ---- headline: median lever values across the price-consistent set ----
+    def _med(col):
+        return float(np.median(consistent[col])) if col in consistent.columns else None
+
+    present = [(c, lbl, kind) for c, lbl, kind in _LEVERS if c in consistent.columns]
+    mcols = st.columns(len(present))
+    for (c, lbl, kind), col_ui in zip(present, mcols):
+        short = lbl.split(" (")[0]
+        col_ui.metric(f"Implied {short.lower()}", _fmt(_med(c), kind))
+
+    # ---- range table (P5 / P25 / median / P75 / P95) ----
+    range_rows = []
+    for c, lbl, kind in present:
+        p5, p25, p50, p75, p95 = np.percentile(consistent[c], [5, 25, 50, 75, 95])
+        range_rows.append({
+            "Lever": lbl,
+            "Bearish (P5)": _fmt(p5, kind),
+            "Low (P25)": _fmt(p25, kind),
+            "Central (median)": _fmt(p50, kind),
+            "High (P75)": _fmt(p75, kind),
+            "Bullish (P95)": _fmt(p95, kind),
+        })
+    ranges_df = pd.DataFrame(range_rows)
+
+    left_c, right_c = st.columns([1.05, 1])
+    with left_c:
+        st.markdown(f"**Lever ranges that reproduce ${cur:,.2f}**  \n"
+                    f"<span style='color:#888'>{len(consistent):,} matching scenarios "
+                    f"(±{_b:.0%} band, {len(consistent)/len(trials_solve):.0%} of the "
+                    f"{len(trials_solve):,} simulated)</span>", unsafe_allow_html=True)
+        st.dataframe(ranges_df, use_container_width=True, hide_index=True)
+
+    with right_c:
+        if {"wacc", "year1_growth"}.issubset(consistent.columns):
+            st.markdown("**The trade-off frontier**")
+            fig0, ax0 = plt.subplots(figsize=(6, 4.2))
+            color_col = "terminal_gross_margin" if "terminal_gross_margin" in consistent.columns else None
+            sc = ax0.scatter(consistent["wacc"], consistent["year1_growth"],
+                             c=(consistent[color_col] if color_col else BRAND),
+                             cmap="viridis" if color_col else None, s=16, alpha=0.75)
+            ax0.set_xlabel("WACC"); ax0.set_ylabel("Year-1 revenue growth")
+            ax0.set_title(f"Combinations that reprice to ${cur:,.0f}")
+            ax0.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.0%}"))
+            ax0.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
+            if color_col:
+                cb = fig0.colorbar(sc, ax=ax0); cb.set_label("Terminal gross margin")
+                cb.ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
+            ax0.grid(alpha=0.3)
+            st.pyplot(fig0)
+            st.caption("Each dot is one scenario whose DCF equals today's price. Higher growth only "
+                       "reproduces the price alongside a higher discount rate — the market's implied trade-off.")
+
+    # ---- sample of the actual combinations + CSV export ----
+    show_cols = [c for c, _, _ in present] + ["implied_price"]
+    preview = consistent[show_cols].copy().sort_values("implied_price").reset_index(drop=True)
+    with st.expander(f"See the {len(consistent):,} price-consistent lever combinations (raw)"):
+        st.dataframe(preview.round(4), use_container_width=True, height=320)
+
+    st.download_button(
+        "⬇️ Download price-consistent combinations (CSV)",
+        data=preview.to_csv(index=False).encode("utf-8"),
+        file_name=f"{meta['ticker']}_price_consistent_combinations.csv",
+        mime="text/csv")
+
+st.download_button(
+    "⬇️ Download full Monte Carlo simulation (CSV)",
+    data=trials_solve.to_csv(index=False).encode("utf-8"),
+    file_name=f"{meta['ticker']}_monte_carlo_trials.csv",
+    mime="text/csv")
+
+st.divider()
+
 # --------------------------------------------------------------------------
 # Consolidated summary
 # --------------------------------------------------------------------------
