@@ -1,0 +1,6 @@
+fiscal_year,period_end_date,revenue,gross_margin,ebit,net_income,eps_diluted,capex,total_debt,cash_and_investments,shares_diluted,source_note
+FY2021,2021-12-31,1542,0.779,-411,-520,-0.27,,,,,2025 10-K comparative financial statements
+FY2022,2022-12-31,1906,0.785,-161,-371,-0.18,,,,,2025 10-K comparative financial statements
+FY2023,2023-12-31,2225,0.806,120,217,0.09,,,,,2025 10-K comparative financial statements
+FY2024,2024-12-31,2866,0.803,310,468,0.19,,,,,2025 10-K comparative financial statements
+FY2025,2025-12-31,4475,0.824,1414,1635,0.63,,,7177.043,,2025 10-K; cash plus marketable securities from Q2 2026 comparative balance sheet

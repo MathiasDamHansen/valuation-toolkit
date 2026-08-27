@@ -1,0 +1,27 @@
+field,value,unit,notes
+ticker,PLTR,text,
+company_name,Palantir Technologies Inc.,text,
+as_of_date,2026-08-27,date,
+current_price,185.93,USD/share,
+shares_diluted,2400,millions,
+market_cap,446800,USD mm,
+ttm_revenue,6160,USD mm,
+ttm_gross_margin,0.848,decimal,
+ttm_ebitda,2660,USD mm,
+ttm_ebit,2630,USD mm,
+ttm_net_income,3020,USD mm,
+ttm_eps_diluted,1.17,USD/share,
+ttm_capex,42.02,USD mm,
+total_debt,211.40,USD mm,
+cash_and_investments,9410,USD mm,
+ppe_net,61.403,USD mm,
+tax_rate_effective,0.0134,decimal,
+ar_days,,days,leave blank if not found
+inventory_days,,days,leave blank if not found
+ap_days,,days,leave blank if not found
+interest_rate_on_debt,,decimal,leave blank if not found
+interest_yield_on_cash,,decimal,leave blank if not found
+beta,1.56,number,
+risk_free_rate,,decimal,
+equity_risk_premium,,decimal,
+wacc_estimate,0.1284,decimal,
