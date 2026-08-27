@@ -2,21 +2,33 @@
 app.py — Streamlit interactive dashboard
 ========================================
 A live, interactive front-end for the reverse-DCF + consensus + multiples
-toolkit. Works for ANY company: pick a bundled dataset, or upload your own five
+toolkit. Works for ANY company: pick a bundled dataset, or upload your own
 CSVs (generated via AGENT_DATA_COLLECTION_PROMPT.md). Consensus/comps layers
 auto-appear only when that data is present, so it works for uncovered small-caps
 too.
+
+COMPANY AUTO-DISCOVERY
+----------------------
+Company datasets live in subfolders named `data_<company>` inside the
+`company_data/` folder (e.g. company_data/data_ryanair, company_data/data_nvidia).
+The dropdown is built automatically from whatever `data_*` folders it finds —
+the label is the part after `data_` (so `data_ryanair` -> "Ryanair"). To add a
+new company you just add a new `data_<company>` folder of CSVs and commit; no
+edits to this file are ever needed.
+
+Legacy top-level `data/` and `data_smallcap/` folders (if present) are also
+picked up automatically.
 
 Run locally:
     pip install -r requirements.txt
     streamlit run app.py
 
 Deploy free: push the repo to GitHub, then on share.streamlit.io point a new app
-at app.py. That gives you a public live dashboard URL — the Python-native
-equivalent of a "Lovable website", but able to actually run this model.
+at app.py.
 """
 
 import copy
+import glob
 import os
 import tempfile
 
@@ -35,15 +47,50 @@ from settings import BRAND, BRAND_ALT, POS, NEG, INK
 
 st.set_page_config(page_title="Reverse-DCF Valuation", layout="wide")
 
-BUNDLED = {"NVDA (full coverage)": "data", "TINYCO (no coverage small-cap)": "data_smallcap"}
 REQUIRED = ["company_inputs.csv", "financial_history.csv"]
 OPTIONAL = ["analyst_consensus.csv", "analyst_bank_targets.csv", "multiples_comps.csv",
             "segments.csv", "valuation_history.csv"]
 
+# Where company folders live. `company_data/` is the primary location; the repo
+# root is also scanned so legacy `data/` and `data_smallcap/` still work.
+SEARCH_ROOTS = ["company_data", "."]
+
+
+def _label_from_folder(folder_name: str) -> str:
+    """'data_ryanair' -> 'Ryanair', 'data_smallcap' -> 'Smallcap', 'data' -> 'Data'."""
+    base = os.path.basename(folder_name.rstrip("/"))
+    name = base[len("data_"):] if base.startswith("data_") else base
+    name = name.replace("_", " ").replace("-", " ").strip()
+    return name.title() if name else base
+
 
 @st.cache_data(show_spinner=False)
-def _load(data_dir):
-    return load_all(data_dir)
+def discover_companies():
+    """Return {label: folder_path} for every folder that (a) is named `data` or
+    `data_*` and (b) contains the required CSVs. Scans company_data/ and repo root."""
+    found = {}
+    for root in SEARCH_ROOTS:
+        # match both 'data' and 'data_*' directly under each root
+        candidates = []
+        if os.path.isdir(root):
+            for entry in sorted(os.listdir(root)):
+                full = os.path.join(root, entry)
+                if os.path.isdir(full) and (entry == "data" or entry.startswith("data_")):
+                    candidates.append(full)
+        for path in candidates:
+            has_required = all(os.path.exists(os.path.join(path, r)) and
+                               os.path.getsize(os.path.join(path, r)) > 0 for r in REQUIRED)
+            if not has_required:
+                continue
+            label = _label_from_folder(path)
+            # avoid duplicate labels (e.g. same name under two roots)
+            uniq = label
+            i = 2
+            while uniq in found and found[uniq] != path:
+                uniq = f"{label} ({i})"
+                i += 1
+            found[uniq] = path
+    return dict(sorted(found.items(), key=lambda kv: kv[0].lower()))
 
 
 def _dir_from_upload(files):
@@ -54,15 +101,33 @@ def _dir_from_upload(files):
     return tmp
 
 
+@st.cache_data(show_spinner=False)
+def _load(data_dir):
+    return load_all(data_dir)
+
+
 # --------------------------------------------------------------------------
 # Sidebar: data source + assumption overrides
 # --------------------------------------------------------------------------
 st.sidebar.title("Valuation toolkit")
-source = st.sidebar.radio("Data source", ["Bundled example", "Upload my 5 CSVs"])
 
-if source == "Bundled example":
-    choice = st.sidebar.selectbox("Company", list(BUNDLED.keys()))
-    data_dir = BUNDLED[choice]
+companies = discover_companies()
+
+source = st.sidebar.radio("Data source", ["Bundled company", "Upload my CSVs"])
+
+if source == "Bundled company":
+    if not companies:
+        st.sidebar.error(
+            "No company folders found. Add a folder named `data_<company>` "
+            "(e.g. `company_data/data_ryanair`) containing at least "
+            "`company_inputs.csv` and `financial_history.csv`, then reload.")
+        st.title("Reverse-DCF + Consensus + Multiples")
+        st.info("No company datasets detected yet. See the sidebar for how to add one.")
+        st.stop()
+    choice = st.sidebar.selectbox("Company", list(companies.keys()))
+    data_dir = companies[choice]
+    st.sidebar.caption(f"Loaded from `{data_dir}`. "
+                       f"{len(companies)} compan{'y' if len(companies)==1 else 'ies'} auto-detected.")
 else:
     st.sidebar.caption("Upload the CSVs from AGENT_DATA_COLLECTION_PROMPT.md. "
                        "Required: company_inputs.csv + financial_history.csv. "
@@ -78,7 +143,7 @@ else:
 
 if not data_dir:
     st.title("Reverse-DCF + Consensus + Multiples")
-    st.info("Pick a bundled example or upload your CSVs in the sidebar to begin.")
+    st.info("Pick a bundled company or upload your CSVs in the sidebar to begin.")
     st.stop()
 
 data = _load(data_dir)
@@ -140,12 +205,7 @@ k[3].metric("Implied terminal growth", f"{imp_tg:.2%}" if imp_tg is not None els
 k[4].metric("Implied WACC", f"{imp_wacc:.2%}" if imp_wacc is not None else "n/a")
 
 # ==========================================================================
-# NEW SECTION — "What combinations of levers reproduce today's price?"
-# Reverse Monte Carlo: keep only the simulated scenarios whose DCF value lands
-# on the current market price, then show what growth / WACC / margin / capex
-# (and, when peers exist, exit EV/EBITDA multiple) those scenarios require.
-# Everything is driven straight from the Monte Carlo trials, and the resulting
-# combinations are downloadable as CSV.
+# What combinations of levers reproduce today's price?  (reverse Monte Carlo)
 # ==========================================================================
 st.divider()
 st.subheader("🎯 What must be true for the DCF to equal today's price?")
@@ -158,8 +218,6 @@ band_pct = st.slider("Match tolerance around current price (±%)", 1.0, 10.0, 2.
                      help="A scenario 'reproduces' the price if its DCF is within this band of "
                           "today's price. Widen it if too few scenarios match.") / 100.0
 
-# Use a multiples-aware cloud when peers exist (adds exit EV/EBITDA as a lever);
-# otherwise reuse the standard own-assumptions Monte Carlo already computed.
 if has_comps:
     with st.spinner("Solving lever combinations (multiples-aware)..."):
         trials_solve = mv.run_exit_multiple_blend(
@@ -169,7 +227,6 @@ else:
     trials_solve = trials_a
 
 cur = base.current_price
-# find the price-consistent subset, auto-widening the band until enough match
 _b = band_pct
 mask = trials_solve["implied_price"].between(cur * (1 - _b), cur * (1 + _b))
 consistent = trials_solve[mask].copy()
@@ -178,7 +235,6 @@ while len(consistent) < 60 and _b < 0.15:
     mask = trials_solve["implied_price"].between(cur * (1 - _b), cur * (1 + _b))
     consistent = trials_solve[mask].copy()
 
-# levers to report (only those present as columns get shown)
 _LEVERS = [
     ("year1_growth", "Year-1 revenue growth", "pct"),
     ("terminal_growth", "Terminal growth", "pct"),
@@ -196,7 +252,6 @@ def _fmt(v, kind):
 
 
 if len(consistent) == 0:
-    # price sits outside the entire simulated cloud — informative in itself
     med_sim = float(trials_solve["implied_price"].median())
     p99_sim = float(np.percentile(trials_solve["implied_price"], 99))
     st.warning(
@@ -205,7 +260,6 @@ if len(consistent) == 0:
         f"The market is pricing in more than these lever ranges support — i.e. today's price "
         f"already embeds an out-of-range, very optimistic story.")
 else:
-    # ---- headline: median lever values across the price-consistent set ----
     def _med(col):
         return float(np.median(consistent[col])) if col in consistent.columns else None
 
@@ -215,7 +269,6 @@ else:
         short = lbl.split(" (")[0]
         col_ui.metric(f"Implied {short.lower()}", _fmt(_med(c), kind))
 
-    # ---- range table (P5 / P25 / median / P75 / P95) ----
     range_rows = []
     for c, lbl, kind in present:
         p5, p25, p50, p75, p95 = np.percentile(consistent[c], [5, 25, 50, 75, 95])
@@ -257,7 +310,6 @@ else:
             st.caption("Each dot is one scenario whose DCF equals today's price. Higher growth only "
                        "reproduces the price alongside a higher discount rate — the market's implied trade-off.")
 
-    # ---- sample of the actual combinations + CSV export ----
     show_cols = [c for c, _, _ in present] + ["implied_price"]
     preview = consistent[show_cols].copy().sort_values("implied_price").reset_index(drop=True)
     with st.expander(f"See the {len(consistent):,} price-consistent lever combinations (raw)"):
