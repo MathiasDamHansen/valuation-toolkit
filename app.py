@@ -298,4 +298,44 @@ with right:
     ax.hist(trials_a["implied_price"], bins=70, color=BRAND, alpha=0.85)
     ax.axvline(base.current_price, color=INK, ls="--", lw=2, label=f"Price ${base.current_price:,.0f}")
     ax.axvline(dcf_price, color=NEG, ls="-", lw=2, label=f"Base DCF ${dcf_price:,.0f}")
-    ax.set_xlim(0, np.percentile(trials_
+    ax.set_xlim(0, np.percentile(trials_a["implied_price"], 99))
+    ax.set_xlabel("Implied price ($)"); ax.legend(fontsize=8)
+    st.pyplot(fig)
+
+# --------------------------------------------------------------------------
+# Tornado + 2D grid + scenarios
+# --------------------------------------------------------------------------
+c1, c2 = st.columns(2)
+with c1:
+    st.subheader("Tornado — driver sensitivity")
+    torn = enh.tornado_sensitivity(base, drv)
+    fig2, ax2 = plt.subplots(figsize=(6, 4))
+    bp = torn.attrs["base_price"]
+    for i, r in torn.iterrows():
+        ax2.barh([i], [r["price_high"] - bp], left=[bp], color=POS)
+        ax2.barh([i], [r["price_low"] - bp], left=[bp], color=NEG)
+    ax2.axvline(bp, color=INK, lw=1.5)
+    ax2.set_yticks(range(len(torn))); ax2.set_yticklabels(torn["driver"], fontsize=8)
+    ax2.set_xlabel("Implied price ($)")
+    st.pyplot(fig2)
+with c2:
+    st.subheader("Scenarios (bear / base / bull)")
+    fig3, ax3 = plt.subplots(figsize=(6, 4))
+    cmap = {"Bear": NEG, "Base": BRAND, "Bull": POS}
+    ax3.bar(scen["scenario"], scen["implied_price"], color=[cmap[s] for s in scen["scenario"]])
+    ax3.axhline(base.current_price, color=INK, ls="--")
+    for i, r in scen.iterrows():
+        ax3.text(i, r["implied_price"], f"${r['implied_price']:,.0f}", ha="center", va="bottom", fontsize=8)
+    ax3.set_ylabel("Implied price ($)")
+    st.pyplot(fig3)
+
+st.subheader("WACC × terminal-growth sensitivity")
+grid = enh.sensitivity_grid_2d(base, drv)
+st.dataframe(grid.style.format("${:,.0f}", na_rep="—"), use_container_width=True)
+
+with st.expander("Forecast detail (first years)"):
+    st.dataframe(forecast[["revenue", "growth", "ebitda", "ebit_margin", "ufcf", "shares", "eps"]]
+                 .round(2), use_container_width=True)
+
+st.caption("Educational tool, not investment advice. Regenerate inputs via "
+           "AGENT_DATA_COLLECTION_PROMPT.md before relying on any figure.")
