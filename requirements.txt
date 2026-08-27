@@ -1,0 +1,7 @@
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
+streamlit>=1.30
+jinja2>=3.1
+# optional: PDF export of the dashboard
+weasyprint>=60 ; platform_system != "Windows"
