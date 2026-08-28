@@ -32,10 +32,48 @@ from settings import BRAND, BRAND_ALT, POS, NEG, INK
 
 st.set_page_config(page_title="Reverse-DCF Valuation", layout="wide")
 
-BUNDLED = {"NVDA (full coverage)": "data", "TINYCO (no coverage small-cap)": "data_smallcap"}
 REQUIRED = ["company_inputs.csv", "financial_history.csv"]
 OPTIONAL = ["analyst_consensus.csv", "analyst_bank_targets.csv", "multiples_comps.csv",
             "segments.csv", "valuation_history.csv"]
+
+# Where company folders live. Any subfolder named `data` or `data_*` under one
+# of these roots (that contains the required CSVs) becomes a dropdown entry.
+# So company_data/data_nvidia -> "Nvidia", company_data/data_ryanair -> "Ryanair".
+SEARCH_ROOTS = ["company_data", "."]
+
+
+def _label_from_folder(path):
+    """'data_ryanair' -> 'Ryanair', 'data_smallcap' -> 'Smallcap', 'data' -> 'Data'."""
+    base = os.path.basename(path.rstrip("/"))
+    name = base[len("data_"):] if base.startswith("data_") else base
+    name = name.replace("_", " ").replace("-", " ").strip()
+    return name.title() if name else base
+
+
+@st.cache_data(show_spinner=False)
+def discover_companies():
+    """Return {label: folder_path} for every `data`/`data_*` folder that holds
+    the required CSVs, scanning company_data/ and the repo root."""
+    found = {}
+    for root in SEARCH_ROOTS:
+        if not os.path.isdir(root):
+            continue
+        for entry in sorted(os.listdir(root)):
+            full = os.path.join(root, entry)
+            if not os.path.isdir(full):
+                continue
+            if not (entry == "data" or entry.startswith("data_")):
+                continue
+            ok = all(os.path.exists(os.path.join(full, r)) and
+                     os.path.getsize(os.path.join(full, r)) > 0 for r in REQUIRED)
+            if not ok:
+                continue
+            label = _label_from_folder(full)
+            uniq, i = label, 2
+            while uniq in found and found[uniq] != full:
+                uniq = f"{label} ({i})"; i += 1
+            found[uniq] = full
+    return dict(sorted(found.items(), key=lambda kv: kv[0].lower()))
 
 
 @st.cache_data(show_spinner=False)
@@ -93,17 +131,28 @@ def f_mult(v):
 # Sidebar: data source + assumption overrides
 # --------------------------------------------------------------------------
 st.sidebar.title("Valuation toolkit")
-source = st.sidebar.radio("Data source", ["Bundled example", "Upload my 5 CSVs"])
 
-if source == "Bundled example":
-    choice = st.sidebar.selectbox("Company", list(BUNDLED.keys()))
-    data_dir = BUNDLED[choice]
+companies = discover_companies()
+source = st.sidebar.radio("Data source", ["Bundled company", "Upload my CSVs"])
+
+data_dir = None
+if source == "Bundled company":
+    if not companies:
+        st.sidebar.error("No company folders found. Add a folder named `data_<company>` "
+                         "(e.g. `company_data/data_nvidia`) containing at least "
+                         "`company_inputs.csv` and `financial_history.csv`, then reload.")
+        st.title("Reverse-DCF + Consensus + Multiples")
+        st.info("No company datasets detected yet. See the sidebar for how to add one.")
+        st.stop()
+    choice = st.sidebar.selectbox("Company", list(companies.keys()))
+    data_dir = companies[choice]
+    st.sidebar.caption(f"Loaded from `{data_dir}` · "
+                       f"{len(companies)} compan{'y' if len(companies)==1 else 'ies'} detected.")
 else:
     st.sidebar.caption("Upload the CSVs from AGENT_DATA_COLLECTION_PROMPT.md. "
                        "Required: company_inputs.csv + financial_history.csv. "
                        "Consensus/comps/segments are optional.")
     ups = st.sidebar.file_uploader("CSV files", type="csv", accept_multiple_files=True)
-    data_dir = None
     if ups:
         names = [u.name for u in ups]
         if all(r in names for r in REQUIRED):
@@ -113,7 +162,7 @@ else:
 
 if not data_dir:
     st.title("Reverse-DCF + Consensus + Multiples")
-    st.info("Pick a bundled example or upload your CSVs in the sidebar to begin.")
+    st.info("Pick a bundled company or upload your CSVs in the sidebar to begin.")
     st.stop()
 
 data = _load(data_dir)
