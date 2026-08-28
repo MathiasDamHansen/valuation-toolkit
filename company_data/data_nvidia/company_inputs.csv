@@ -1,0 +1,30 @@
+field,value,unit,notes
+ticker,NVDA,text,
+company_name,NVIDIA Corporation,text,
+as_of_date,2026-08-24,date,date all figures below are as-of
+current_price,212.00,USD/share,
+shares_diluted,24500,millions,diluted weighted avg shares
+market_cap,,USD mm,optional; derived as price x shares if blank
+ttm_revenue,253500,USD mm,trailing twelve months
+ttm_gross_margin,0.74,decimal,TTM gross margin
+ttm_ebitda,165800,USD mm,TTM EBITDA
+ttm_ebit,162300,USD mm,TTM EBIT (EBITDA less D&A)
+ttm_net_income,159600,USD mm,TTM GAAP net income
+ttm_eps_diluted,6.53,USD/share,TTM diluted EPS
+ttm_capex,11400,USD mm,TTM capital expenditures
+total_debt,10000,USD mm,short + long-term debt
+cash_and_investments,60000,USD mm,cash + marketable securities
+ppe_net,30000,USD mm,net property plant and equipment
+tax_rate_effective,0.165,decimal,effective/guided tax rate
+ar_days,60,days,accounts receivable days
+inventory_days,100,days,inventory days on COGS
+ap_days,70,days,accounts payable days on COGS
+interest_rate_on_debt,0.035,decimal,average coupon on debt
+interest_yield_on_cash,0.045,decimal,yield earned on cash/investments
+beta,1.9,number,levered beta
+risk_free_rate,0.043,decimal,10-year Treasury yield
+equity_risk_premium,0.05,decimal,assumed market equity risk premium
+wacc_estimate,0.11,decimal,starting WACC assumption
+sbc_dilution_pct,0.010,decimal,gross new shares issued per year as % of shares (SBC)
+buyback_pct,0.015,decimal,shares repurchased per year as % of shares
+dividend_payout_pct_ni,0.02,decimal,dividend payout as % of net income
