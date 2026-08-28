@@ -174,34 +174,36 @@ valuation_history = data.get("valuation_history")
 # --------------------------------------------------------------------------
 # 5-year historical averages (from financial_history.csv) to guide the sliders
 # --------------------------------------------------------------------------
-def _avg5(col):
+def historical_avg(col, y):
     if history is None or col not in getattr(history, "columns", []):
         return None
-    s = history[col].dropna().tail(5)
+    s = history[col].dropna().tail(y)
     return float(s.mean()) if len(s) else None
+    
+avg_rev_growth_5y = historical_avg("revenue_growth", 5)
+avg_rev_growth_2y = historical_avg("revenue_growth", 2)
 
+avg_gross_margin_5y = historical_avg("gross_margin", 5)
+avg_gross_margin_2y = historical_avg("gross_margin", 2)
 
-avg_rev_growth_5y = _avg5("revenue_growth")
-avg_gross_margin_5y = _avg5("gross_margin")
-
-
-def _avg_caption(value, what):
+def _avg_caption(value, label, length):
     if value is None:
-        return f"📊 5-yr avg {what}: n/a (insufficient history)"
-    return f"📊 5-yr avg {what}: {value:.1%}"
-
+        return f"{length}-yr avg {label}: n/a (insufficient history)"
+    return f"{length}-yr avg {label}: {value:.1%}"
 
 st.sidebar.markdown("### Assumptions")
 n_trials = st.sidebar.select_slider("Monte Carlo trials", [1000, 2000, 5000, 10000, 20000], value=5000)
 
 y1 = st.sidebar.slider("Year-1 revenue growth", -0.20, 1.50, float(round(drv0.year1_growth, 3)), 0.01)
 st.sidebar.caption(_avg_caption(avg_rev_growth_5y, "revenue growth"))
+st.sidebar.caption(_avg_caption(avg_rev_growth_2y, "revenue growth"))
 
 tg = st.sidebar.slider("Terminal growth", 0.00, 0.08, float(round(drv0.terminal_growth, 3)), 0.005)
 st.sidebar.caption(_avg_caption(avg_rev_growth_5y, "revenue growth (long-run reference)"))
 
 gm = st.sidebar.slider("Terminal gross margin", 0.05, 0.95, float(round(drv0.terminal_gross_margin, 3)), 0.01)
 st.sidebar.caption(_avg_caption(avg_gross_margin_5y, "gross margin"))
+st.sidebar.caption(_avg_caption(avg_gross_margin_2y, "gross margin"))
 
 wacc = st.sidebar.slider("WACC", 0.04, 0.20, float(round(drv0.wacc, 3)), 0.005)
 exit_w = st.sidebar.slider("Exit-multiple weight in TV", 0.0, 1.0, float(drv0.exit_multiple_weight), 0.05)
