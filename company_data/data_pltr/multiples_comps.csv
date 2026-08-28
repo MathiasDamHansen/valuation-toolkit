@@ -1,7 +1,0 @@
-entity,ticker,is_subject,price,shares_diluted,market_cap,net_debt,enterprise_value,pe_ttm,pe_fwd,ev_ebitda_ttm,ev_ebitda_fwd,ev_revenue_ttm,ev_revenue_fwd,peg_fwd,as_of_date,notes
-Palantir Technologies,PLTR,TRUE,185.93,2400,446800,-9198.6,437600,159.02,97.68,164.35,,71.09,44.07,1.82,2026-08-27,market data from Stock Analysis
-Snowflake,SNOW,FALSE,315.37,,109300,,,,163.2,,,,,,2026-08-27,peer data from VCP Scanner
-MongoDB,MDB,FALSE,406.11,,32700,,,,66.3,,,,,,2026-08-27,peer data from VCP Scanner
-Datadog,DDOG,FALSE,227.67,,81000,,,,93.3,,,,,,2026-08-27,peer data from VCP Scanner
-SentinelOne,S,FALSE,20.51,,6900,,,,108.0,,,,,,2026-08-27,peer data from VCP Scanner
-C3.ai,AI,FALSE,9.70,,1400,,,,,,,,,,2026-08-27,peer data from VCP Scanner
