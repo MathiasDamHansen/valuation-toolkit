@@ -195,15 +195,15 @@ st.sidebar.markdown("### Assumptions")
 n_trials = st.sidebar.select_slider("Monte Carlo trials", [1000, 2000, 5000, 10000, 20000], value=5000)
 
 y1 = st.sidebar.slider("Year-1 revenue growth", -0.20, 1.50, float(round(drv0.year1_growth, 3)), 0.01)
-st.sidebar.caption(_avg_caption(avg_rev_growth_5y, "revenue growth"))
-st.sidebar.caption(_avg_caption(avg_rev_growth_2y, "revenue growth"))
+st.sidebar.caption(_avg_caption(avg_rev_growth_5y, "revenue growth"), 5)
+st.sidebar.caption(_avg_caption(avg_rev_growth_2y, "revenue growth"), 2)
 
 tg = st.sidebar.slider("Terminal growth", 0.00, 0.08, float(round(drv0.terminal_growth, 3)), 0.005)
-st.sidebar.caption(_avg_caption(avg_rev_growth_5y, "revenue growth (long-run reference)"))
+st.sidebar.caption(_avg_caption(avg_rev_growth_5y, "revenue growth (long-run reference)"), 5)
 
 gm = st.sidebar.slider("Terminal gross margin", 0.05, 0.95, float(round(drv0.terminal_gross_margin, 3)), 0.01)
-st.sidebar.caption(_avg_caption(avg_gross_margin_5y, "gross margin"))
-st.sidebar.caption(_avg_caption(avg_gross_margin_2y, "gross margin"))
+st.sidebar.caption(_avg_caption(avg_gross_margin_5y, "gross margin"), 5)
+st.sidebar.caption(_avg_caption(avg_gross_margin_2y, "gross margin"), 2)
 
 wacc = st.sidebar.slider("WACC", 0.04, 0.20, float(round(drv0.wacc, 3)), 0.005)
 exit_w = st.sidebar.slider("Exit-multiple weight in TV", 0.0, 1.0, float(drv0.exit_multiple_weight), 0.05)
