@@ -1,0 +1,17 @@
+field,value
+ticker,SMCI
+as_of_date,2026-08-27
+num_analysts,19
+avg_price_target,42.38
+median_price_target,42.50
+low_price_target,15.00
+high_price_target,60.00
+consensus_rating,Hold
+next_fy_label,FY2027 (year ending Jun 2027)
+next_fy_revenue_estimate,67130
+next_fy_eps_estimate,4.34
+next_fy2_label,FY2028 (year ending Jun 2028)
+next_fy2_revenue_estimate,78760
+next_fy2_eps_estimate,5.33
+next_quarter_revenue_estimate,11040
+next_quarter_eps_estimate,0.57

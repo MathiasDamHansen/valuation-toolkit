@@ -1,0 +1,6 @@
+fiscal_year,period_end_date,revenue,gross_margin,ebitda,ebit,net_income,eps_diluted,da,cfo,capex,total_debt,cash_and_investments,ppe_net,shareholders_equity,shares_diluted,price,source_note
+FY2022,2022-06-30,5196.099,0.1540,375.717,343.246,285.163,0.53,32.471,-440.80,45.18,596.76,267.70,,,536.15,,SMCI filings / Stock Analysis; split-adjusted per-share data
+FY2023,2023-06-30,7123.482,0.1801,799.692,764.788,639.998,1.14,34.904,663.58,36.79,290.30,440.46,,,559.70,,SMCI filings / Stock Analysis; split-adjusted per-share data
+FY2024,2024-06-30,14989.251,0.1375,1272.184,1233.491,1152.666,1.92,38.693,-2486.00,124.28,2183.00,1673.00,,,602.15,,SMCI filings / Stock Analysis; split-adjusted per-share data
+FY2025,2025-06-30,21972.042,0.1106,1329.833,1271.489,1048.854,1.68,58.344,1660.00,127.21,5059.00,5176.00,,,628.402,,SMCI FY2025 10-K / Stock Analysis
+FY2026,2026-06-30,39063.072,0.1082,3074.105,2983.838,2230.453,3.26,90.267,-6810.00,162.00,9311.00,7521.00,,14500,697.348,29.33,SMCI FY2026 unaudited results / Stock Analysis

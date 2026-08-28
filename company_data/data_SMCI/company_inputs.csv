@@ -1,0 +1,30 @@
+field,value,unit,notes
+ticker,SMCI,text,
+company_name,"Super Micro Computer, Inc.",text,
+as_of_date,2026-08-27,date,Latest completed regular trading session
+current_price,38.46,USD/share,"Stock Analysis close, 2026-08-27"
+shares_diluted,697.348,millions,FY2026 diluted weighted-average shares
+market_cap,24880,USD mm,"Stock Analysis, updated 2026-08-28"
+ttm_revenue,39063.072,USD mm,FY2026 unaudited / TTM
+ttm_gross_margin,0.1082,decimal,FY2026 gross margin
+ttm_ebitda,3074.105,USD mm,Stock Analysis/Yahoo standardized FY2026
+ttm_ebit,2983.838,USD mm,Stock Analysis/Yahoo standardized FY2026
+ttm_net_income,2230.453,USD mm,FY2026 net income
+ttm_eps_diluted,3.26,USD/share,FY2026 diluted EPS
+ttm_capex,162,USD mm,Positive convention; FY2026
+total_debt,9311,USD mm,Stock Analysis FY2026 cash & debt
+cash_and_investments,7521,USD mm,Stock Analysis FY2026 cash & investments
+ppe_net,,USD mm,Not confidently sourced; intentionally blank
+shareholders_equity,14500,USD mm,"Q4 FY2026 results, rounded"
+tax_rate_effective,0.1996,decimal,TTM effective tax rate
+ar_days,,days,Intentionally blank
+inventory_days,,days,Intentionally blank
+ap_days,,days,Intentionally blank
+interest_rate_on_debt,,decimal,Intentionally blank
+interest_yield_on_cash,,decimal,Intentionally blank
+beta,1.97,number,5-year beta
+risk_free_rate,,decimal,Scenario input; intentionally blank
+equity_risk_premium,,decimal,Scenario input; intentionally blank
+wacc_estimate,0.1142,decimal,Stock Analysis estimate
+sbc_dilution_pct,0.1097,decimal,One-year shares outstanding increase used as proxy
+buyback_pct,0,decimal,No recurring buyback assumption entered

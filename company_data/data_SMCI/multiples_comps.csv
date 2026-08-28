@@ -1,0 +1,6 @@
+entity,ticker,is_subject,price,shares_diluted,market_cap,net_debt,enterprise_value,pe_ttm,pe_fwd,ev_ebitda_ttm,ev_ebitda_fwd,ev_revenue_ttm,ev_revenue_fwd,peg_fwd,as_of_date,notes
+Super Micro Computer,SMCI,TRUE,38.46,646.87,24880,1790,26670,11.81,8.87,9.44,,0.68,0.37,0.43,2026-08-27,Subject; Stock Analysis current statistics
+Dell Technologies,DELL,FALSE,,,,,,,,,,,,,,Peer placeholder; refresh on a common valuation date
+Hewlett Packard Enterprise,HPE,FALSE,,,,,,,,,,,,,,Peer placeholder; refresh on a common valuation date
+Cisco Systems,CSCO,FALSE,,,,,,,,,,,,,,Peer placeholder; refresh on a common valuation date
+Lenovo Group,0992.HK,FALSE,,,,,,,,,,,,,,Peer placeholder; refresh on a common valuation date
