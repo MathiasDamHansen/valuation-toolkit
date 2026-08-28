@@ -1,0 +1,30 @@
+field,value,unit,notes
+ticker,ORCL,text,
+company_name,Oracle Corporation,text,
+as_of_date,2026-08-27,date,market data as of
+current_price,151.94,USD/share,Oracle Investor Relations closing price
+shares_diluted,2910,millions,FY2026 diluted weighted-average shares
+market_cap,428820,USD mm,market data
+ttm_revenue,67357,USD mm,FY2026
+ttm_gross_margin,0.6582,decimal,gross profit 44340 / revenue 67357
+ttm_ebitda,30490,USD mm,S&P Global methodology via Yahoo Finance
+ttm_ebit,20609,USD mm,FY2026 GAAP operating income
+ttm_net_income,17090,USD mm,FY2026 GAAP net income
+ttm_eps_diluted,5.83,USD/share,FY2026 GAAP diluted EPS
+ttm_capex,55670,USD mm,FY2026 capital expenditures; positive per template
+total_debt,167430,USD mm,most recent quarter
+cash_and_investments,31890,USD mm,cash and equivalents
+ppe_net,,USD mm,not reliably available in captured sources
+shareholders_equity,43060,USD mm,FY2026 total equity
+tax_rate_effective,0.126,decimal,FY2026 effective tax rate
+ar_days,,days,
+inventory_days,,days,
+ap_days,,days,
+interest_rate_on_debt,,decimal,
+interest_yield_on_cash,,decimal,
+beta,1.72,number,5-year monthly beta
+risk_free_rate,,decimal,
+equity_risk_premium,,decimal,
+wacc_estimate,,decimal,
+sbc_dilution_pct,,decimal,
+buyback_pct,,decimal,

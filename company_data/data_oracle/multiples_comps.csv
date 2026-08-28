@@ -1,0 +1,7 @@
+entity,ticker,is_subject,price,shares_diluted,market_cap,net_debt,enterprise_value,pe_ttm,pe_fwd,ev_ebitda_ttm,ev_ebitda_fwd,ev_revenue_ttm,ev_revenue_fwd,peg_fwd,as_of_date,notes
+Oracle Corporation,ORCL,TRUE,151.94,2880.471,428820,135540,558060,25.54,18.42,16.68,11.22,8.29,6.28,0.84,2026-08-27,subject; current Yahoo/MarketScreener data
+Microsoft Corporation,MSFT,FALSE,,,3570000,,3550000,26.8,24.2,17.1,,,,,2026-08-19,enterprise software/cloud peer; internal research based on Yahoo Finance
+Alphabet Inc.,GOOGL,FALSE,,,4190000,,4080000,17.3,16.8,12.5,,,,,2026-08-19,cloud infrastructure peer; internal research based on Yahoo Finance
+Amazon.com Inc.,AMZN,FALSE,,,2820000,,2920000,21.0,22.3,11.5,,,,,2026-08-19,cloud infrastructure peer; internal research based on Yahoo Finance
+SAP SE,SAP,FALSE,,,242000,,,25.56,,16.06,,5.11,,,2026-08-27,enterprise applications peer; MarketScreener
+ServiceNow Inc.,NOW,FALSE,,,130060,,,81.43,,21.19,,7.92,,,2026-08-27,enterprise workflow software peer; MarketScreener

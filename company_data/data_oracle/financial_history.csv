@@ -1,0 +1,6 @@
+fiscal_year,period_end_date,revenue,gross_margin,ebitda,ebit,net_income,eps_diluted,da,cfo,capex,total_debt,cash_and_investments,ppe_net,shareholders_equity,shares_diluted,price,source_note
+FY2022,2022-05-31,42440,,21565,19593,6717,2.41,1972,,,,,,,2668.157,71.92,https://www.marketscreener.com/quote/stock/ORACLE-CORPORATION-438745/valuation/
+FY2023,2023-05-31,49954,,23428,20902,8503,3.07,2526,,,,,,,2699.802,105.94,https://www.marketscreener.com/quote/stock/ORACLE-CORPORATION-438745/valuation/
+FY2024,2024-05-31,52961,,26184,23055,10467,3.71,3129,,,,,,,2748.514,117.19,https://www.marketscreener.com/quote/stock/ORACLE-CORPORATION-438745/valuation/
+FY2025,2025-05-31,57399,,28900,25033,12443,4.34,3867,,,,,,,2804.234,165.53,https://www.marketscreener.com/quote/stock/ORACLE-CORPORATION-438745/valuation/
+FY2026,2026-05-31,67357,0.6582,36549,28926,16984,5.83,7623,31980,55670,167430,31890,,43060,2876.046,225.78,https://investor.oracle.com/financials/default.aspx; https://finance.yahoo.com/quote/ORCL/key-statistics/
