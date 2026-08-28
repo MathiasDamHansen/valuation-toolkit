@@ -1,6 +1,0 @@
-fiscal_year,period_end_date,revenue,gross_margin,ebit,net_income,eps_diluted,capex,total_debt,cash_and_investments,shares_diluted,source_note
-FY2022,2022-03-31,5580,0.025,-395,-280,-0.49,,,,565,ChartRow SEC-filed USD figures; VCP gross margin
-FY2023,2023-03-31,11200,0.206,1500,1370,2.40,,,,570,ChartRow SEC-filed USD figures; VCP gross margin
-FY2024,2024-03-31,14600,0.288,2240,2080,3.63,,,,573,ChartRow SEC-filed USD figures; VCP gross margin
-FY2025,2025-03-31,15000,0.190,1670,1730,3.12,,,,554,ChartRow SEC-filed USD figures; VCP gross margin
-FY2026,2026-03-31,18000,0.210,2750,2520,4.74,,,,532,ChartRow SEC-filed USD figures; VCP gross margin
