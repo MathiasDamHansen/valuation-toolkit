@@ -1,0 +1,30 @@
+field,value,unit,notes
+ticker,HOVE.CO,text,Yahoo Finance ticker; Nasdaq Copenhagen ticker HOVE
+company_name,Hove A/S,text,
+as_of_date,2026-08-31,date,Latest completed trading session explicitly found
+current_price,6.96,DKK/share,"End-of-day quote, 2026-08-31"
+shares_diluted,25.283333,millions,Shares outstanding at 2026-06-30
+market_cap,175.972,DKK mm,Calculated as current price x shares outstanding
+ttm_revenue,250.888,DKK mm,FY2025 less H1 2025 plus H1 2026
+ttm_gross_margin,0.33015,decimal,TTM gross profit / revenue
+ttm_ebitda,28.922,DKK mm,FY2025 less H1 2025 plus H1 2026
+ttm_ebit,26.929,DKK mm,FY2025 less H1 2025 plus H1 2026
+ttm_net_income,20.633,DKK mm,FY2025 less H1 2025 plus H1 2026
+ttm_eps_diluted,0.8161,DKK/share,TTM net income / latest shares outstanding
+ttm_capex,,DKK mm,Not separately disclosed; intentionally blank
+total_debt,16.151,DKK mm,Implied from H1 2026 net debt plus closing cash
+cash_and_investments,4.588,DKK mm,"H1 2026 cash, end of period"
+ppe_net,,DKK mm,Not separately captured; intentionally blank
+shareholders_equity,96.618,DKK mm,H1 2026
+tax_rate_effective,0.1787,decimal,H1 2026 implied: (EBIT + net financials - net profit) / pretax profit
+ar_days,,days,Intentionally blank
+inventory_days,,days,Intentionally blank
+ap_days,,days,Intentionally blank
+interest_rate_on_debt,,decimal,Intentionally blank
+interest_yield_on_cash,,decimal,Intentionally blank
+beta,0.90,number,Yahoo Finance 5Y monthly beta
+risk_free_rate,,decimal,Scenario input; intentionally blank
+equity_risk_premium,,decimal,Scenario input; intentionally blank
+wacc_estimate,,decimal,Intentionally blank for user scenario input
+sbc_dilution_pct,0,decimal,No SBC dilution assumption entered
+buyback_pct,0,decimal,No recurring buyback assumption entered

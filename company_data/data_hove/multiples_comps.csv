@@ -1,0 +1,6 @@
+entity,ticker,is_subject,price,shares_diluted,market_cap,net_debt,enterprise_value,pe_ttm,pe_fwd,ev_ebitda_ttm,ev_ebitda_fwd,ev_revenue_ttm,ev_revenue_fwd,peg_fwd,as_of_date,notes
+Hove A/S,HOVE.CO,TRUE,6.96,25.283333,175.972,11.563,187.535,8.53,,6.48,,0.75,,,2026-08-31,Current price with H1 2026 net debt and calculated TTM figures
+Parker-Hannifin,PH,FALSE,,,,,,,,,,,,,,Peer placeholder; refresh on a common valuation date
+SKF,SKF-B.ST,FALSE,,,,,,,,,,,,,,Peer placeholder; refresh on a common valuation date
+Graco,GGG,FALSE,,,,,,,,,,,,,,Peer placeholder; refresh on a common valuation date
+Alfa Laval,ALFA.ST,FALSE,,,,,,,,,,,,,,Peer placeholder; refresh on a common valuation date
