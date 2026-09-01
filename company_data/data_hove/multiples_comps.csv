@@ -1,0 +1,6 @@
+entity,ticker,is_subject,price,shares_diluted,market_cap,net_debt,enterprise_value,pe_ttm,pe_fwd,ev_ebitda_ttm,ev_ebitda_fwd,ev_revenue_ttm,ev_revenue_fwd,peg_fwd,as_of_date,notes;;
+"Hove A/S,HOVE.CO,TRUE,6.96,25.283333,175.972,11.563,187.535,8.53,,6.48,,0.75,,,2026-08-31,""DKK / DKKm";" current price with H1 2026 net debt and calculated TTM figures""";
+"Parker-Hannifin,PH,FALSE,979.44,126.05,123460,8230,131690,34.39,27.72,23.25,,6.13,,3.31,2026-08-31,""USD / USDm"; diversified motion-control peer with lubrication exposure;" Stock Analysis"""
+"SKF,SKF-B.ST,FALSE,273.20,455.35,126600,10430,137030,28.14,15.55,12.17,,1.53,,2.01,2026-09-01,""SEK / SEKm"; direct lubrication-systems and industrial-maintenance peer;" Stock Analysis"""
+"Graco,GGG,FALSE,77.43,161.95,12540,-460,12080,24.34,22.85,16.44,,5.33,,2.28,2026-08-31,""USD / USDm"; fluid-handling and lubrication-equipment peer;" Stock Analysis"""
+"Alfa Laval,ALFA.ST,FALSE,574.80,413.33,237580,16460,254040,28.99,25.49,17.71,,3.61,,2.47,2026-08-31,""SEK / SEKm"; industrial fluid-handling and specialty-machinery peer;" Stock Analysis"""
